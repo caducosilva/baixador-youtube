@@ -1,34 +1,33 @@
-# ==========================================================
-#  NUNCA versionar: contem SESSAO DE LOGIN (acesso as contas)
-# ==========================================================
+# Credenciais e sessões — NUNCA versionar
+*.env
+.env*
+credentials*.json
+*token*.json
+*api*key*.json
 cookies/
-chrome-login-profile/
 *.cookies
 cookies.txt
+*-profile/
 
-# Dados pessoais de uso
-historico.db
-historico.db-wal
-historico.db-shm
-fila.json
+# Dados pessoais
+*.db
+*.sqlite*
 config.json
 logs/
 
-# Python
+# Python / Node / Flutter / Android
 __pycache__/
 *.py[cod]
-*.egg-info/
 .venv/
 venv/
+node_modules/
+dist/
+.next/
+.idea/
+.gradle/
+build/
 
 # Sistema
 desktop.ini
 Thumbs.db
 .DS_Store
-
-# Midia baixada (caso alguem aponte a saida para dentro do projeto)
-*.mp3
-*.mp4
-*.m4a
-*.webm
-*.part
