@@ -1,0 +1,22 @@
+{
+  "pasta_mp3": "C:\\Users\\SEU_USUARIO\\Music\\yt-dlp",
+  "pasta_mp4": "C:\\Users\\SEU_USUARIO\\Videos\\yt-dlp",
+  "navegador_cookies": "chrome",
+  "perfil_navegador": "",
+  "qualidade_mp3": "0",
+  "altura_maxima_mp4": 1080,
+  "incluir_playlist": "auto",
+  "escrever_thumbnail": true,
+  "escrever_metadados": true,
+  "limite_downloads_simultaneos": 3,
+  "idioma_legendas": "pt",
+  "baixar_legendas": false,
+  "limite_itens_playlist": 0,
+  "pasta_por_playlist": true,
+  "numerar_playlist": true,
+  "usar_historico": true,
+  "avisar_acima_de": 20,
+  "evitar_duplicadas": true,
+  "pausa_entre_musicas_min": 3,
+  "pausa_entre_musicas_max": 8
+}
