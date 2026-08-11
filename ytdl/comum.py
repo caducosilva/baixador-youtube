@@ -18,6 +18,7 @@ guarda o resultado no arquivo para as proximas vezes.
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -27,8 +28,13 @@ COOKIES_DIR = RAIZ / "cookies"
 LOGS_DIR = RAIZ / "logs"
 
 PADRAO = {
-    "pasta_mp3": str(Path.home() / "Music" / "yt-dlp"),
-    "pasta_mp4": str(Path.home() / "Videos" / "yt-dlp"),
+    # "~" e expandido para a pasta do usuario em tempo de execucao, entao o
+    # mesmo config.json funciona em qualquer maquina/usuario
+    "pasta_mp3": "~/Music",
+    "pasta_mp4": "~/Videos/VideoDownloader",
+    # MP4 sai com nome aleatorio (UUID) e sem metadado nenhum
+    "nome_aleatorio_mp4": True,
+    "remover_metadados_mp4": True,
     "navegador_cookies": "firefox",
     "perfil_navegador": "",
     "qualidade_mp3": "0",
@@ -68,6 +74,11 @@ def preparar_console() -> None:
             pass
 
 
+def expandir(caminho: str) -> str:
+    """Resolve '~' e variaveis de ambiente para um caminho absoluto real."""
+    return str(Path(os.path.expandvars(str(caminho))).expanduser())
+
+
 def carregar_config() -> dict:
     cfg = dict(PADRAO)
     if CONFIG_PATH.exists():
@@ -75,6 +86,8 @@ def carregar_config() -> dict:
             cfg.update(json.loads(CONFIG_PATH.read_text(encoding="utf-8")))
         except Exception as exc:  # noqa: BLE001
             print(f"AVISO: config.json invalido ({exc}); usando padroes.")
+    for chave in ("pasta_mp3", "pasta_mp4"):
+        cfg[chave] = expandir(cfg.get(chave) or PADRAO[chave])
     return cfg
 
 

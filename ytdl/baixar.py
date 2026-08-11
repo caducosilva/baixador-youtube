@@ -3,8 +3,10 @@
 
 from __future__ import annotations
 
+import subprocess
 import sys
 import time
+import uuid
 from datetime import datetime
 from pathlib import Path
 
@@ -222,6 +224,84 @@ def filtro_duplicadas(cfg: dict, modo: str, contador: dict):
     return filtro
 
 
+def anonimizar_video(caminho: Path, renomear: bool, limpar: bool) -> Path | None:
+    """Deixa o MP4 sem rastro: nome UUID e zero metadados.
+
+    Usa '-c copy', entao NAO recodifica: e uma remuxagem rapida, sem perda de
+    qualidade. Remove tags do container, capitulos e a marca do encoder.
+    """
+    if not caminho.exists():
+        return None
+
+    novo_nome = f"{uuid.uuid4()}{caminho.suffix}" if renomear else caminho.name
+    destino = caminho.with_name(novo_nome)
+
+    if not limpar:
+        if destino != caminho:
+            caminho.rename(destino)
+        return destino
+
+    temporario = caminho.with_name(f"_limpando_{uuid.uuid4().hex[:8]}{caminho.suffix}")
+    comando = [
+        "ffmpeg", "-y", "-loglevel", "error",
+        "-i", str(caminho),
+        "-map_metadata", "-1",     # tira titulo, artista, comentario, data...
+        "-map_chapters", "-1",     # tira capitulos
+        "-fflags", "+bitexact",    # tira a assinatura do encoder
+        "-c", "copy",              # sem recodificar
+        str(temporario),
+    ]
+    try:
+        r = subprocess.run(comando, capture_output=True, text=True, timeout=600)
+        if r.returncode != 0 or not temporario.exists():
+            raise RuntimeError((r.stderr or "ffmpeg falhou")[:150])
+        caminho.unlink(missing_ok=True)
+        temporario.rename(destino)
+        return destino
+    except Exception as exc:  # noqa: BLE001
+        temporario.unlink(missing_ok=True)
+        print(f"    aviso: nao consegui limpar os metadados ({str(exc)[:70]})")
+        if destino != caminho and caminho.exists():
+            caminho.rename(destino)
+            return destino
+        return caminho
+
+
+def _arquivos_de(info: dict) -> list[Path]:
+    """Caminhos realmente gravados por um item ja baixado."""
+    saida = []
+    for req in info.get("requested_downloads") or []:
+        caminho = req.get("filepath")
+        if caminho:
+            saida.append(Path(caminho))
+    return saida
+
+
+def pos_processar_videos(info: dict, cfg: dict) -> int:
+    """Aplica nome aleatorio + limpeza de metadados nos MP4 baixados."""
+    renomear = bool(cfg.get("nome_aleatorio_mp4", True))
+    limpar = bool(cfg.get("remover_metadados_mp4", True))
+    if not renomear and not limpar:
+        return 0
+
+    itens = []
+    entradas = info.get("entries") if isinstance(info, dict) else None
+    if entradas is not None:
+        itens = [e for e in entradas if e]
+    elif isinstance(info, dict):
+        itens = [info]
+
+    tratados = 0
+    for it in itens:
+        for caminho in _arquivos_de(it):
+            novo = anonimizar_video(caminho, renomear, limpar)
+            if novo:
+                tratados += 1
+                # o historico aponta para o arquivo novo
+                it.setdefault("requested_downloads", [{}])[0]["filepath"] = str(novo)
+    return tratados
+
+
 def registrar_baixados(info: dict, modo: str, site: str) -> int:
     """Grava no historico o que realmente foi baixado agora."""
     itens = []
@@ -402,6 +482,8 @@ def baixar(urls: list[str], modo: str, forcar_playlist: bool | None = None) -> i
                         f"nenhum dos {len(itens)} itens pode ser baixado "
                         "(o site bloqueou ou mudou a extracao)"
                     )
+                if modo == 'mp4':
+                    pos_processar_videos(info, cfg)
                 novos = registrar_baixados(info, modo, site)
                 extra = f", {puladas} ja tinha(m)" if puladas else ""
                 if len(bons) < len(itens):
@@ -419,6 +501,11 @@ def baixar(urls: list[str], modo: str, forcar_playlist: bool | None = None) -> i
                 print(f"  JA TINHA: {titulo}\n")
                 _registrar(f"DUP  {modo} {site} {url}")
                 continue
+
+            if modo == 'mp4':
+                tratados = pos_processar_videos(info, cfg)
+                if tratados:
+                    print(f"  video anonimizado (nome UUID, sem metadados)")
 
             # item unico tambem precisa entrar no historico, senao baixar a
             # mesma musica de novo nunca seria detectado
