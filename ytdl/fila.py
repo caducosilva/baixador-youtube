@@ -113,6 +113,19 @@ class Fila:
         self.salvar()
         self.ao_mudar()
 
+    def retentar_falhas(self) -> int:
+        count = 0
+        with self._lock:
+            for i in self.itens:
+                if i.estado in (FALHOU, CANCELADO):
+                    i.estado = ESPERANDO
+                    i.detalhe = "re-tentando download..."
+                    count += 1
+        if count > 0:
+            self.salvar()
+            self.ao_mudar()
+        return count
+
     def limpar_terminados(self) -> None:
         with self._lock:
             self.itens = [i for i in self.itens if i.estado in (ESPERANDO, BAIXANDO)]
@@ -228,7 +241,10 @@ class Fila:
             finally:
                 self._proc = None
 
-            if item.estado == CANCELADO:
+            if self._pausado or not self._rodando:
+                item.estado = ESPERANDO
+                item.detalhe = "interrompido; aguardando retomada"
+            elif item.estado == CANCELADO:
                 self.ao_log("cancelado por voce")
             elif codigo == 0:
                 item.estado = CONCLUIDO

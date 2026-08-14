@@ -45,9 +45,16 @@ pip install -r requirements.txt
 
 ## Como usar
 
-Execute o utilitário pelo terminal ou dando duplo clique em `FILA.bat`:
+Interface gráfica (PySide6):
 ```bash
-python interface.py
+python app.py
+```
+
+Linha de comando:
+```bash
+python baixar.py                          # fila interativa no terminal
+python baixar.py <url> [<url>...]         # baixa como MP3 (padrão)
+python baixar.py --mp4 <url> [<url>...]   # baixa como MP4
 ```
 
 ---
@@ -113,7 +120,7 @@ A pausa é ~30% do tempo e existe de propósito: baixar centenas de faixas em ra
 O YouTube exige sessão autenticada até para conteúdo público — sem cookies aparece
 `Sign in to confirm you're not a bot`.
 
-Rode `CAPTURAR-LOGIN.bat`: abre uma janela do Chrome com **perfil separado** do seu
+Rode `python capturar_login.py`: abre uma janela do Chrome com **perfil separado** do seu
 navegador do dia a dia, você faz login normalmente e os cookies são guardados em
 `cookies/`. O yt-dlp renova a sessão sozinho a cada download.
 
@@ -185,10 +192,9 @@ Desligue com `"nome_aleatorio_mp4": false` e `"remover_metadados_mp4": false`.
 ## Estrutura
 
 ```
-FILA.bat               interface da fila
-MP3.bat / MP4.bat      linha de comando
-CAPTURAR-LOGIN.bat     captura do login
-interface.py           janela (Tkinter)
+app.py                 janela principal (PySide6)
+interface.py           atalho que abre o app.py
+baixar.py              linha de comando unificada (MP3/MP4/fila)
 baixar_mp3.py          entrada MP3
 baixar_mp4.py          entrada MP4
 capturar_login.py      cookies via CDP
@@ -196,9 +202,8 @@ ytdl/
 ├── baixar.py          motor de download
 ├── comum.py           configuração e login
 ├── fila.py            fila sequencial
+├── interativo.py      modo interativo no terminal
 └── historico.py       banco SQLite
-testes/
-└── teste_completo.py  bateria de testes
 ```
 
 ---

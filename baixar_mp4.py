@@ -16,23 +16,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from ytdl.baixar import baixar
 from ytdl.comum import preparar_console, separar_opcoes
+from ytdl.interativo import modo_interativo
 
 
 def main() -> int:
     preparar_console()
     urls, forcado = separar_opcoes(sys.argv[1:])
     if not urls:
-        print("\n  BAIXAR VIDEO EM MP4")
-        print("  Cole a(s) URL(s) e de Enter. Varias? separe por espaco.")
-        print("  Playlist e detectada sozinha. Para mandar voce mesmo,")
-        print("  escreva --playlist ou --so-um junto da URL.\n")
-        entrada = input("  URL: ").strip()
-        urls, extra = separar_opcoes(entrada.split())
-        if extra is not None:
-            forcado = extra
-    if not urls:
-        print("Nenhuma URL informada.")
-        return 1
+        return modo_interativo("mp4")
     return 1 if baixar(urls, "mp4", forcar_playlist=forcado) else 0
 
 

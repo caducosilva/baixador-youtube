@@ -195,21 +195,22 @@ def opcoes_de_login(url: str, cfg: dict, verboso: bool = True) -> dict:
         # cookiefile faz o yt-dlp LER e tambem REGRAVAR a sessao renovada
         return {"cookiefile": str(alvo)}
 
-    navegador = (cfg.get("navegador_cookies") or "").strip()
-    # so tenta o navegador se ele existir de fato; senao o yt-dlp aborta o download
-    if navegador and navegador not in navegadores_instalados():
-        alternativo = navegador_padrao()
-        if verboso:
-            print(f"  login: '{navegador}' nao esta instalado", end="")
-            print(f"; usando '{alternativo}'" if alternativo else "; seguindo sem login")
-        navegador = alternativo
+    # So tenta ler cookies do navegador para sites conhecidos de login
+    if site != "outros":
+        navegador = (cfg.get("navegador_cookies") or "").strip()
+        if navegador and navegador not in navegadores_instalados():
+            alternativo = navegador_padrao()
+            if verboso:
+                print(f"  login: '{navegador}' nao esta instalado", end="")
+                print(f"; usando '{alternativo}'" if alternativo else "; seguindo sem login")
+            navegador = alternativo
 
-    if navegador:
-        perfil = (cfg.get("perfil_navegador") or "").strip()
-        if verboso:
-            extra = f" (perfil: {perfil})" if perfil else ""
-            print(f"  login: tentando ler cookies do {navegador}{extra}")
-        return {"cookiesfrombrowser": (navegador, perfil or None, None, None)}
+        if navegador:
+            perfil = (cfg.get("perfil_navegador") or "").strip()
+            if verboso:
+                extra = f" (perfil: {perfil})" if perfil else ""
+                print(f"  login: tentando ler cookies do {navegador}{extra}")
+            return {"cookiesfrombrowser": (navegador, perfil or None, None, None)}
 
     if verboso:
         print("  login: nenhum cookie configurado (so conteudo publico)")

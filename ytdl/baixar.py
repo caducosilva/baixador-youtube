@@ -147,13 +147,13 @@ def opcoes_base(cfg: dict, url: str, verboso: bool = True, playlist: bool = Fals
         # 'only_download': item ruim de playlist e pulado, MAS erro de extracao
         # continua estourando. Com True o yt-dlp devolvia None e a causa real
         # ("Sign in to confirm you're not a bot") sumia.
-        "ignoreerrors": "only_download",
-        "retries": 5,
-        "fragment_retries": 10,
+        "retries": 25,
+        "fragment_retries": 25,
+        "file_access_retries": 5,
         "continuedl": True,            # retoma download interrompido
         "concurrent_fragment_downloads": int(cfg.get("limite_downloads_simultaneos", 3)),
         "quiet": True,
-        "no_warnings": False,
+        "no_warnings": True,
         "noprogress": True,
         "progress_hooks": [Progresso()],
         "restrictfilenames": False,
@@ -347,33 +347,7 @@ def contar_itens(url: str, cfg: dict) -> int:
 
 
 def confirmar_playlist_grande(url: str, cfg: dict) -> int | None:
-    """Pergunta antes de disparar um download enorme.
-
-    Uma URL de radio/mix do YouTube ('list=RD...') pode ter centenas de faixas.
-    Devolve: None = seguir sem limite, int = limite escolhido, -1 = cancelar.
-    """
-    aviso = int(cfg.get("avisar_acima_de", 20) or 0)
-    if aviso <= 0 or not sys.stdin.isatty():
-        return None  # rodando sem terminal: nao trava esperando resposta
-
-    total = contar_itens(url, cfg)
-    if total <= aviso:
-        return None
-
-    print(f"\n  ATENCAO: essa URL tem {total} itens.")
-    print("    [Enter] baixar todos")
-    print("    [numero] baixar so os N primeiros")
-    print("    [c] cancelar")
-    try:
-        resposta = input("  O que fazer? ").strip().lower()
-    except EOFError:
-        # sem entrada disponivel (rodando por script/pipe): segue sem perguntar
-        print("  (sem terminal interativo; baixando todos)")
-        return None
-    if resposta == "c":
-        return -1
-    if resposta.isdigit() and int(resposta) > 0:
-        return int(resposta)
+    """Nao interrompe: baixa a playlist automaticamente sem perguntar."""
     return None
 
 
@@ -473,14 +447,14 @@ def baixar(urls: list[str], modo: str, forcar_playlist: bool | None = None) -> i
                 bons = [e for e in itens if e]
                 puladas = contador.get("puladas", 0)
                 if not bons:
-                    if puladas:
-                        print(f"  NADA NOVO: {puladas} musica(s) ja estavam no historico")
-                        _registrar(f"DUP  {modo} {site} {url} :: {puladas} puladas")
+                    qtd = puladas or len(itens)
+                    if qtd > 0:
+                        print(f"  NADA NOVO: {qtd} musica(s) ja estavam no historico")
+                        _registrar(f"DUP  {modo} {site} {url} :: {qtd} puladas")
                         print()
                         continue
                     raise DownloadError(
-                        f"nenhum dos {len(itens)} itens pode ser baixado "
-                        "(o site bloqueou ou mudou a extracao)"
+                        "nenhum item disponivel para baixar (playlist vazia ou bloqueada)"
                     )
                 if modo == 'mp4':
                     pos_processar_videos(info, cfg)
