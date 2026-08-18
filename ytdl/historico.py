@@ -71,8 +71,23 @@ def normalizar(texto: str) -> str:
     return " ".join(t.split())
 
 
+_GENERICO = re.compile(
+    r"^(video|reel|post|foto|photo|shorts?|tiktok(\s*video)?|instagram(\s*video|\s*post)?|untitled)\b",
+    re.I,
+)
+
+
+def eh_titulo_generico(texto: str) -> bool:
+    if not texto:
+        return True
+    norm = normalizar(texto)
+    if len(norm) < 4:
+        return True
+    return bool(_GENERICO.search(norm))
+
+
 def ja_baixado(video_id: str | None, titulo: str, artista: str = "", modo: str = "") -> tuple[bool, str]:
-    """(ja_tem, motivo). Confere pelo ID e depois pelo titulo.
+    """(ja_tem, motivo). Confere pelo ID e depois pelo titulo (se nao for generico).
 
     O modo entra na conta: a MESMA musica em mp3 e em mp4 sao entregas
     diferentes, entao pedir o video depois de ja ter o audio deve funcionar.
@@ -91,7 +106,8 @@ def ja_baixado(video_id: str | None, titulo: str, artista: str = "", modo: str =
             ).fetchone()
             if linha:
                 return True, f"mesmo video, baixado em {linha[1][:10]}"
-        if norm:
+        # So confere por titulo se nao for um titulo generico (ex: 'Video by user', 'Reel by...')
+        if norm and not eh_titulo_generico(titulo):
             linha = conn.execute(
                 f"SELECT titulo, baixado_em FROM baixados WHERE titulo_norm = ?{filtro_modo} LIMIT 1",
                 (norm, *extra),

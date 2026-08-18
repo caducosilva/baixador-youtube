@@ -86,28 +86,32 @@ class Progresso:
             self.ultimo_envio = 0.0
 
 
-def _modelo_saida(pasta: str, cfg: dict, playlist: bool) -> str:
+def _modelo_saida(pasta: str, cfg: dict, playlist: bool, modo: str = "mp4") -> str:
     """Onde e como nomear o arquivo.
 
-    Item solto:  Pasta/Canal - Titulo.ext
-    Playlist:    Pasta/Nome da Playlist/01 - Titulo.ext
-    Os campos de playlist caem para vazio quando nao ha playlist, por isso
-    usamos templates diferentes em vez de um so.
+    MP3 solto:  Pasta/Titulo.mp3
+    MP4 solto:  Pasta/Uploader - Titulo [id].mp4 (garante unicidade em Reels/Shorts)
+    Playlist:   Pasta/Nome da Playlist/Titulo.ext
     """
     base = Path(pasta)
     if not playlist:
-        return str(base / "%(uploader)s - %(title)s.%(ext)s")
+        if modo == "mp3":
+            return str(base / "%(title)s.%(ext)s")
+        return str(base / "%(uploader&{} - |)s%(title)s [%(id)s].%(ext)s")
 
     if cfg.get("pasta_por_playlist", True):
         base = base / "%(playlist_title,playlist|Downloads)s"
-    nome = "%(playlist_index)02d - %(title)s.%(ext)s" if cfg.get("numerar_playlist", True) else "%(title)s.%(ext)s"
+    if cfg.get("numerar_playlist", False):
+        nome = "%(playlist_index)02d - %(title)s.%(ext)s" if modo == "mp3" else "%(playlist_index)02d - %(title)s [%(id)s].%(ext)s"
+    else:
+        nome = "%(title)s.%(ext)s" if modo == "mp3" else "%(uploader&{} - |)s%(title)s [%(id)s].%(ext)s"
     return str(base / nome)
 
 
 def opcoes_mp3(cfg: dict, url: str, playlist: bool = False) -> dict:
     opts = {
         "format": "bestaudio/best",
-        "outtmpl": _modelo_saida(cfg["pasta_mp3"], cfg, playlist),
+        "outtmpl": _modelo_saida(cfg["pasta_mp3"], cfg, playlist, modo="mp3"),
         "postprocessors": [
             {
                 "key": "FFmpegExtractAudio",
@@ -119,22 +123,24 @@ def opcoes_mp3(cfg: dict, url: str, playlist: bool = False) -> dict:
         "writethumbnail": bool(cfg.get("escrever_thumbnail", True)),
     }
     if cfg.get("escrever_thumbnail", True):
-        # capa embutida no MP3 (fica bonito no player)
         opts["postprocessors"].append({"key": "EmbedThumbnail", "already_have_thumbnail": False})
     return opts
 
 
 def opcoes_mp4(cfg: dict, url: str, playlist: bool = False) -> dict:
-    altura = int(cfg.get("altura_maxima_mp4", 1080))
+    altura = int(cfg.get("altura_maxima_mp4", 1080) or 0)
+    format_sort = ["res", "vbr", "abr", "quality"]
+    if altura > 0:
+        max_dim = int(altura * 16 / 9)  # 1920 para 1080p, 1280 para 720p
+        fmt = f"bestvideo*[width<=?{max_dim}][height<=?{max_dim}]+bestaudio/bestvideo*+bestaudio/best"
+    else:
+        fmt = "bestvideo*+bestaudio/best"
+
     return {
-        # prefere mp4+m4a (compativel com tudo); cai para o melhor disponivel
-        "format": (
-            f"bestvideo[height<={altura}][ext=mp4]+bestaudio[ext=m4a]/"
-            f"bestvideo[height<={altura}]+bestaudio/"
-            f"best[height<={altura}]/best"
-        ),
+        "format": fmt,
+        "format_sort": format_sort,
         "merge_output_format": "mp4",
-        "outtmpl": _modelo_saida(cfg["pasta_mp4"], cfg, playlist),
+        "outtmpl": _modelo_saida(cfg["pasta_mp4"], cfg, playlist, modo="mp4"),
         "postprocessors": [{"key": "FFmpegMetadata", "add_metadata": True}],
         "writethumbnail": False,
     }

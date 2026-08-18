@@ -22,6 +22,8 @@ __pycache__/
 venv/
 node_modules/
 dist/
+scratch/
+.pytest_cache/
 .next/
 .idea/
 .gradle/

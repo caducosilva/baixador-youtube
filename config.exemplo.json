@@ -9,7 +9,7 @@
   "limite_itens_playlist": 0,
   "avisar_acima_de": 20,
   "pasta_por_playlist": true,
-  "numerar_playlist": true,
+  "numerar_playlist": false,
   "evitar_duplicadas": true,
   "usar_historico": true,
   "pausa_entre_musicas_min": 3,
